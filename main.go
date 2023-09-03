@@ -2,6 +2,7 @@ package main
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"sync"
 
@@ -10,8 +11,8 @@ import (
 )
 
 type Counter struct {
-	value int        `json:"value"`
-	mu    sync.Mutex `json:"mu"`
+	value int
+	mu    sync.Mutex
 }
 
 func (c *Counter) Increase() {
@@ -38,9 +39,12 @@ func main() {
 
 	r.Use(middleware.Logger)
 
-	r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
-		tmpl, _ := template.ParseFiles("index.html")
+	tmpl, err := template.ParseGlob("./public/views/*.html")
+	if err != nil {
+		log.Fatalf("unable to parse templates %e\n", err)
+	}
 
+	r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
 		data := map[string]int{
 			"CounterValue": counter.GetValue(),
 		}
@@ -49,7 +53,6 @@ func main() {
 	})
 
 	r.Post("/increase", func(w http.ResponseWriter, _ *http.Request) {
-		tmpl, _ := template.ParseFiles("counter.html")
 		counter.Increase()
 		data := map[string]int{
 			"CounterValue": counter.GetValue(),
@@ -58,7 +61,6 @@ func main() {
 	})
 
 	r.Post("/decrease", func(w http.ResponseWriter, _ *http.Request) {
-		tmpl, _ := template.ParseFiles("counter.html")
 		counter.Decrease()
 
 		data := map[string]int{
