@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
@@ -16,15 +18,15 @@ type Counter struct {
 	mu    sync.Mutex
 }
 
-func (c *Counter) Increase() {
+func (c *Counter) Increase(amount int) {
 	c.mu.Lock()
-	c.value++
+	c.value = c.value + amount
 	c.mu.Unlock()
 }
 
-func (c *Counter) Decrease() {
+func (c *Counter) Decrease(amount int) {
 	c.mu.Lock()
-	c.value--
+	c.value = c.value - amount
 	c.mu.Unlock()
 }
 
@@ -50,9 +52,14 @@ func HandleGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleIncrease(w http.ResponseWriter, r *http.Request) {
+	amount, err := strconv.Atoi(r.FormValue("amount"))
+	if err != nil {
+		amount = 1
+	}
+
 	appData := r.Context().Value("ctxData").(CtxData)
 
-	appData.counter.Increase()
+	appData.counter.Increase(amount)
 
 	data := map[string]int{
 		"CounterValue": appData.counter.GetValue(),
@@ -62,9 +69,14 @@ func HandleIncrease(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleDecrease(w http.ResponseWriter, r *http.Request) {
+	amount, err := strconv.Atoi(r.FormValue("amount"))
+	if err != nil {
+		amount = 1
+	}
+
 	appData := r.Context().Value("ctxData").(CtxData)
 
-	appData.counter.Decrease()
+	appData.counter.Decrease(amount)
 
 	data := map[string]int{
 		"CounterValue": appData.counter.GetValue(),
@@ -99,5 +111,7 @@ func main() {
 	r.Post("/increase", HandleIncrease)
 	r.Post("/decrease", HandleDecrease)
 
-	http.ListenAndServe("localhost:3000", r)
+	port := 3000
+	log.Printf("Server has been spawned at port %d", port)
+	http.ListenAndServe(fmt.Sprintf("localhost:%d", port), r)
 }
